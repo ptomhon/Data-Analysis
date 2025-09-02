@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 from scipy.signal import find_peaks
 from scipy.optimize import minimize_scalar
+import nmrglue as ng
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
@@ -22,7 +23,7 @@ from matplotlib.figure import Figure
 def exponential_apodization(fid, time, lb):
     return fid * np.exp(-lb * time)
 
-def zero_fill(fid, target_length=65536):
+def zero_fill(fid, target_length=262144):
     return np.pad(fid, (0, target_length - len(fid)), 'constant')
 
 def apply_phase_correction(fid, angle):
@@ -42,18 +43,23 @@ def optimize_phase(fid, time_arr):
     result = minimize_scalar(objective, bounds=(0, 10), method='bounded')
     return result.x
 
-def read_fid_csv(path):
-    df = pd.read_csv(path, header=None)
-    time = df.iloc[:, 0].astype(float).to_numpy() / 1000.0  # convert ms to seconds
-    real = df.iloc[:, 1].astype(float)
-    imag = df.iloc[:, 2].astype(float)
-    fid = (real + 1j * imag).to_numpy()
-    return fid, time
+def read_bruker_fid(path):
+    dic, data = ng.bruker.read(path)
+    if data.ndim == 2 and data.shape[0] == 2:
+        fid = data[0] + 1j * data[1]
+    else:
+        fid = data.astype(np.complex128)
+    # fid = np.real(fid)
+    dt = 1.0 / float(dic["acqus"]["SW_h"]) # sample spacing from SW_h
+    time = np.arange(data.size) * dt
+    return fid, time, dic
 
-def ppm_conversion(freqs):
-    return -((freqs - (2500 - 639.08016399999997)) / 15.507665)
+def ppm_conversion(freqs, dic):
+    sfo1 = float(dic["acqus"]["SFO1"])     # spectrometer frequency in MHz
+    o1 = float(dic["acqus"]["O1"])         # carrier frequency in Hz
+    return (freqs * -1e6 / sfo1) + (o1 / sfo1)
 
-def process_and_plot(fid, time, lb, phase_offset, ppm_start, ppm_stop):
+def process_and_plot(fid, time, lb, phase_offset, ppm_start, ppm_stop, dic):
     fid_apod = exponential_apodization(fid, time, lb)
     opt_phase = optimize_phase(fid_apod, time)
     total_phase = opt_phase + phase_offset
@@ -61,7 +67,7 @@ def process_and_plot(fid, time, lb, phase_offset, ppm_start, ppm_stop):
     fid_zf = zero_fill(fid_corr)
     dt = time[1] - time[0]
     freqs, spectrum = compute_fft(fid_zf, dt)
-    ppm = ppm_conversion(freqs)
+    ppm = ppm_conversion(freqs, dic)
     real = np.real(spectrum)
     baseline = np.mean(real[np.abs(freqs) > 200])
     real -= baseline
@@ -71,7 +77,7 @@ def process_and_plot(fid, time, lb, phase_offset, ppm_start, ppm_stop):
     sort_idx = np.argsort(ppm_vals)
     ppm_vals = ppm_vals[sort_idx]
     real_vals = real_vals[sort_idx]
-    integral = np.trapezoid(real_vals, ppm_vals)
+    integral = np.trapz(real_vals, ppm_vals)
 
     fig = Figure(figsize=(8, 6))
     ax = fig.add_subplot(111)
@@ -99,8 +105,6 @@ class MainWindow(QMainWindow):
 
         form = QFormLayout()
         self.path_edit = QLineEdit("D:/WSU/Raw Data/Spinsolve-1.4T_13C")
-        self.date_edit = QLineEdit("2025-06-11")
-        self.name_edit = QLineEdit("7degCarbon-Cells (PYR70_1)")
         self.lb_spin = QDoubleSpinBox()
         self.lb_spin.setRange(0.0, 2.0)
         self.lb_spin.setSingleStep(0.1)
@@ -115,21 +119,16 @@ class MainWindow(QMainWindow):
         self.ppm_stop.setValue(160.0)
         self.fft_check = QCheckBox("Plot FFT")
         self.fft_check.setChecked(True)
+        self.folder_select = QComboBox()
+        self.path_edit.editingFinished.connect(self.populate_folder_list)
 
         form.addRow("Main Path:", self.path_edit)
-        form.addRow("Date (YYYY-MM-DD):", self.date_edit)
-        form.addRow("Experiment Name:", self.name_edit)
         form.addRow("Apodization (lb):", self.lb_spin)
         form.addRow("PPM Start:", self.ppm_start)
         form.addRow("PPM Stop:", self.ppm_stop)
         form.addRow(self.fft_check)
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Multi-Experiment", "Multi-Transient"])
-        form.addRow("Mode:", self.mode_combo)
-        self.transient_start = QLineEdit("1")
-        self.transient_stop = QLineEdit("50")
-        form.addRow("Transient Start:", self.transient_start)
-        form.addRow("Transient Stop:", self.transient_stop)
+        form.addRow("Select Data Folder:", self.folder_select)
+
         layout.addLayout(form)
 
         self.run_btn = QPushButton("Run")
@@ -178,52 +177,40 @@ class MainWindow(QMainWindow):
 
         self.layout = layout
 
+    def populate_folder_list(self):
+        path = self.path_edit.text()
+        if os.path.isdir(path):
+            folders = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
+            self.folder_select.clear()
+            self.folder_select.addItems(sorted(folders))
+
     def run(self):
         self.data.clear()
         self.phase_offsets.clear()
         self.figs.clear()
         self.current = 0
-        mode = self.mode_combo.currentText()
         try:
             base = self.path_edit.text()
-            date = self.date_edit.text()
-            name = self.name_edit.text()
+            selected = self.folder_select.currentText()
             lb = self.lb_spin.value()
             ppm_start = self.ppm_start.value()
             ppm_stop = self.ppm_stop.value()
 
-            folder = os.path.join(base, date)
-            if mode == "Multi-Experiment":
-                for d in os.listdir(folder):
-                    if name in d:
-                        fid_path = os.path.join(folder, d, "1", "fid.csv")
-                        if os.path.isfile(fid_path):
-                            fid, time = read_fid_csv(fid_path)
-                            self.data.append((fid, time))
-                            self.phase_offsets.append(0)
-                            fig = process_and_plot(fid, time, lb, 0, ppm_start, ppm_stop)
-                            self.figs.append(fig)
-            else:  # Multi-Transient
-                matching_folders = [d for d in os.listdir(folder) if name in d]
-                if not matching_folders:
-                    raise ValueError("No folder found matching experiment name.")
-                timestamp_folder = os.path.join(folder, matching_folders[0])
-                transient_start = int(self.transient_start.text())
-                transient_stop = int(self.transient_stop.text())
-                for sub in sorted(os.listdir(timestamp_folder)):
-                    if sub.isdigit():
-                        sub_num = int(sub)
-                        if transient_start <= sub_num <= transient_stop:
-                            fid_path = os.path.join(timestamp_folder, sub, "fid.csv")
-                            if os.path.isfile(fid_path):
-                                fid, time = read_fid_csv(fid_path)
-                                self.data.append((fid, time))
-                                self.phase_offsets.append(0)
-                                fig = process_and_plot(fid, time, lb, 0, ppm_start, ppm_stop)
-                                self.figs.append(fig)
+            fid_path = os.path.join(base, selected)
+            if not os.path.isdir(fid_path):
+                raise ValueError(f"No FID folder found in: {fid_path}")
+
+            fid, time, dic = read_bruker_fid(fid_path)
+            self.data.append((fid, time, dic))
+            self.phase_offsets.append(0)
+            fig = process_and_plot(fid, time, lb, 0, ppm_start, ppm_stop, dic)
+            self.figs.append(fig)
+            self.status_label.setText(f"Loaded: {selected}")
             self.update_canvas()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
 
     def update_canvas(self):
         if not self.data:
@@ -235,12 +222,12 @@ class MainWindow(QMainWindow):
             self.layout.removeWidget(self.toolbar)
             self.toolbar.setParent(None)
 
-        fid, time = self.data[self.current]
+        fid, time, dic = self.data[self.current]
         lb = self.lb_spin.value()
         offset = self.phase_offsets[self.current]
         ppm_start = self.ppm_start.value()
         ppm_stop = self.ppm_stop.value()
-        fig = process_and_plot(fid, time, lb, offset, ppm_start, ppm_stop)
+        fig = process_and_plot(fid, time, lb, offset, ppm_start, ppm_stop, dic)
         self.figs[self.current] = fig
 
         self.canvas = FigureCanvas(fig)
@@ -249,19 +236,8 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.canvas)
         self.canvas.draw()
 
-        mode = self.mode_combo.currentText()
-        if mode == "Multi-Experiment":
-            base = self.path_edit.text()
-            date = self.date_edit.text()
-            name = self.name_edit.text()
-            folder = os.path.join(base, date)
-            matching = [d for d in os.listdir(folder) if name in d]
-            if self.current < len(matching):
-                self.status_label.setText(f"Timestamp: {matching[self.current]} | Transient: 1")
-        else:
-            start = int(self.transient_start.text())
-            subfolder = start + self.current
-            self.status_label.setText(f"Timestamp: Fixed | Transient: {subfolder}")
+        selected = self.folder_select.currentText()
+        self.status_label.setText(f"Folder: {selected}")
 
     def show_next(self):
         if self.current < len(self.data) - 1:
