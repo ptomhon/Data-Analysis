@@ -174,14 +174,14 @@ def check_fft_validity(fid_segment, dt, T2_apod, phase_corr_angle, allowed_ppms,
     ppm_axis = -((freqs_plot - (2500 - 639.08016399999997)) / 15.507665)
     
     # Condition 1: Check for negative peaks.
-    if np.min(fft_plot_real) < -8:
+    if np.min(fft_plot_real) < -30:
         print("Quality check failed: Negative peaks detected (min value = {:.4f}).".format(np.min(fft_plot_real)))
         return False
     
     # Condition 2: Check that all significant peaks lie within allowed ppm windows.
-    height_threshold = 0.25 #0.01 * np.max(fft_plot_real)
-    prominence_threshold = 0.02 * np.max(fft_plot_real)
-    peaks, properties = find_peaks(fft_plot_real, height=height_threshold, prominence=prominence_threshold)
+    height_threshold = 4 #0.25 0.01 * np.max(fft_plot_real)
+    prominence_threshold = 3 #0.02 * np.max(fft_plot_real)
+    peaks, properties = find_peaks(fft_plot_real, height=height_threshold, prominence=prominence_threshold, distance=60) #find_peaks(fft_plot_real, height=height_threshold, prominence=prominence_threshold)
     if len(peaks) == 0:
         print("Quality check failed: No peaks found with height threshold {:.4f} and prominence threshold {:.4f}.".format(height_threshold, prominence_threshold))
         return False
@@ -208,7 +208,7 @@ def check_fft_validity(fid_segment, dt, T2_apod, phase_corr_angle, allowed_ppms,
             right_index += 1
         
         # Compute the integral over the region between the detected edges.
-        peak_integral = np.trapz(fft_plot_real[left_index:right_index+1], ppm_axis[left_index:right_index+1])
+        peak_integral = np.trapezoid(fft_plot_real[left_index:right_index+1], ppm_axis[left_index:right_index+1])
         print("Peak at {:.2f} ppm: height = {:.4f}, integral = {:.4f}".format(ppm_axis[peak_idx], peak_val, peak_integral))
         if peak_integral < integration_threshold:
             print("Quality check failed: Integrated area for peak at {:.2f} ppm is too low ({:.4f} < threshold {:.4f}).".format(ppm_axis[peak_idx], peak_integral, integration_threshold))
@@ -285,7 +285,7 @@ def plot_denoised_results(time, noisy_signal, denoised_signal, mode="fid"):
 # Single folder processing
 def process_single_folder(folder, base_path,
                           L=2000, T2_apod=5, phase_corr_angle=10,
-                          initial_k=4, allowed_ppms=None, ppm_threshold=1,
+                          initial_k=4, allowed_ppms=None, ppm_threshold=1.5,
                           target_length=65536, n_iter=2):
     """
     Process a single folder:
@@ -448,6 +448,8 @@ def process_multiple_folders(start_folder, end_folder, base_path,
         dt = time_full[1] - time_full[0]
         n_denoise = 2 * L - 1
         fid_segment = fid_full[:n_denoise]
+        
+        # fid_segment = fid_segment * np.exp(-T2_apod)
 
         k = current_initial_k
         optimal_k = k  # store optimal k for this folder
@@ -488,9 +490,9 @@ def process_multiple_folders(start_folder, end_folder, base_path,
         signal = fft_data_plot.real
 
         # Identify peaks with a low threshold.
-        peak_threshold = 3 #0.005 * np.max(signal)
-        peak_prominence = 5 #0.01 * np.max(signal)
-        peaks, _ = find_peaks(signal, height=peak_threshold, prominence=peak_prominence, distance=20)
+        peak_threshold = 5 #0.005 * np.max(signal)
+        peak_prominence = 4 #0.01 * np.max(signal)
+        peaks, _ = find_peaks(signal, height=peak_threshold, prominence=peak_prominence, distance=60)
         print(f"Folder {folder}: Detected {len(peaks)} peaks via find_peaks.")
 
         if len(peaks) == 0:
@@ -771,17 +773,47 @@ def process_four_folders_plots(folder_list, base_path, mode="fid", save_plots=Fa
 
 # process_single_folder(folder=10, base_path=r"D:\WSU\Raw Data\MRI-0.35T\2025-05-01\phantom1", 
 #                       allowed_ppms=[0], n_iter=2, L=4000, initial_k=1, T2_apod=1.5, phase_corr_angle=10)
-# process_single_folder(folder=10, base_path=r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-04-03\250403-123410 7degCarbon-Cells (Pyr70_1)", 
-#                       allowed_ppms=[178, 176, 170, 160, 124], n_iter=2, L=4000, initial_k=7, T2_apod=1.5, phase_corr_angle=10)
-# process_single_folder(folder=15, base_path=r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-04-03\250403-164228 7degCarbon-Cells (KL70_1)", 
-#                       allowed_ppms=[178, 176, 171, 160, 124], n_iter=2, L=4000, initial_k=7, T2_apod=1.5, phase_corr_angle=10)
+process_single_folder(folder=6, base_path=r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-06-10\250610-153506 7degCarbon-Cells (PYR70_3)", 
+                      allowed_ppms=[178, 176.9, 170, 160, 124], ppm_threshold=20, n_iter=2, L=4000, initial_k=15, T2_apod=1.5, phase_corr_angle=10)
+# process_single_folder(folder=15, base_path=r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-02-06\250206-131739 7degCarbon-Cells (KIC_SLIC_002)", 
+#                       allowed_ppms=[178, 176.5, 171, 160, 124], n_iter=2, L=4000, initial_k=7, T2_apod=1.5, phase_corr_angle=10)
 # process_single_folder(folder=20, base_path=r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-03-12\250312-121333 7degCarbon-Cells (Pyr_KIC_CoPol_Cells_001)", 
 #                       allowed_ppms=[178, 176, 171, 170, 160, 124], n_iter=2, L=4000, initial_k=8, T2_apod=1, phase_corr_angle=10)
+
+# # Cancer cell data processing
+# data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
+# data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
+# data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+# process_single_folder(folder=3, base_path=data_b, 
+#                       allowed_ppms=[182.5, 178, 170, 160, 124], 
+#                       ppm_threshold=20, n_iter=2, L=4000, initial_k=12, 
+#                       T2_apod=1.5, phase_corr_angle=10)
+
 
 # =============================================================================
 # Example usage: Multiple folder processing
 # =============================================================================
 # Process multiple folders and save integrated data to a CSV file.
+
+# Cancer Cell Data Processing
+# Pyruvate data processing
+# if __name__ == '__main__':
+#     # Base path where folder subdirectories (each containing fid.csv) reside.
+#     base_path = data_c
+#     # Full path (including CSV filename) where the integrated results should be saved.
+#     output_csv = r"D:\[temp] WSU\2025-08 Leukemia Cancer Cells\Data Analysis\integrated_data_250819-134130-Pyr70_3.csv"
+
+#     process_multiple_folders(start_folder=4, end_folder=150,
+#                              base_path=base_path,
+#                              n_threshold=2, initial_k=12, L=4000, T2_apod=1.5, phase_corr_angle=10,
+#                              allowed_ppms=[182.5, 178, 170, 160, 124],
+#                              ppm_threshold=20, 
+#                              target_length=65536, n_iter=2,
+#                              target_peaks=[182.5, 178, 170, 160, 124],
+#                              metabolite_names=["lactate", "hydrate", "pyruvate", "bicarbonate", "CO2"],
+#                              tolerance=1,
+#                              output_csv=output_csv,
+#                              time_interval=3.5)
 
 # # Pyruvate data processing
 # if __name__ == '__main__':
@@ -802,40 +834,40 @@ def process_four_folders_plots(folder_list, base_path, mode="fid", save_plots=Fa
 #                              output_csv=output_csv,
 #                              time_interval=3.5)
 
-# Pyruvate data processing
-if __name__ == '__main__':
-    # Base path where folder subdirectories (each containing fid.csv) reside.
-    base_path = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-06-10\250610-174216 7degCarbon-Cells (PYR70_5)"
-    # Full path (including CSV filename) where the integrated results should be saved.
-    output_csv = r"D:\WSU\2025-02 Pyruvate Cell Paper\Data Analysis\integrated_data_250610-174216_Run5.csv"
+# # Pyruvate data processing
+# if __name__ == '__main__':
+#     # Base path where folder subdirectories (each containing fid.csv) reside.
+#     base_path = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-06-10\250610-174216 7degCarbon-Cells (PYR70_5)"
+#     # Full path (including CSV filename) where the integrated results should be saved.
+#     output_csv = r"D:\[temp] WSU\2025-02 Pyruvate Cell Paper\Data Analysis\integrated_data_250610-174216_Run5c.csv"
 
-    process_multiple_folders(start_folder=1, end_folder=150,
-                             base_path=base_path,
-                             n_threshold=2, initial_k=2, L=4000, T2_apod=1.5, phase_corr_angle=10,
-                             allowed_ppms=[178, 170, 160, 124],
-                             ppm_threshold=1, 
-                             target_length=65536, n_iter=2,
-                             target_peaks=[178, 170, 160, 124],
-                             metabolite_names=["hydrate", "pyruvate", "bicarbonate", "CO2"],
-                             tolerance=1,
-                             output_csv=output_csv,
-                             time_interval=3.5)
+#     process_multiple_folders(start_folder=1, end_folder=150,
+#                              base_path=base_path,
+#                              n_threshold=3, initial_k=16, L=4000, T2_apod=1.5, phase_corr_angle=10,
+#                              allowed_ppms=[178.5, 176.8, 170, 160, 124],
+#                              ppm_threshold=20, 
+#                              target_length=65536, n_iter=2,
+#                              target_peaks=[178.5, 176.8, 170, 160, 124],
+#                              metabolite_names=["hydrate", "alanine", "pyruvate", "bicarbonate", "CO2"],
+#                              tolerance=1,
+#                              output_csv=output_csv,
+#                              time_interval=3.5)
 
 # # Ketoleucine data processing
 # if __name__ == '__main__':
 #     # Base path where folder subdirectories (each containing fid.csv) reside.
-#     base_path = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-04-03\250403-164228 7degCarbon-Cells (KL70_1)"
+#     base_path = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-02-06\250206-131739 7degCarbon-Cells (KIC_SLIC_002)"
 #     # Full path (including CSV filename) where the integrated results should be saved.
-#     output_csv = r"D:\WSU\2025-02 Ketoleucine Cell paper\Data Analysis\integrated_data_250403-KL70_1.csv"
+#     output_csv = r"D:\[temp] WSU\2025-02 Ketoleucine Cell paper\integrated_data_250206-131739-KL70_2.csv"
 
 #     process_multiple_folders(start_folder=1, end_folder=150,
 #                              base_path=base_path,
-#                              n_threshold=3, initial_k=7, L=4000, T2_apod=1.5, phase_corr_angle=10,
-#                              allowed_ppms=[178, 176, 171, 160, 124],
-#                              ppm_threshold=1, 
+#                              n_threshold=2, initial_k=7, L=4000, T2_apod=1.5, phase_corr_angle=10,
+#                              allowed_ppms=[178, 176.5, 171, 160, 124],
+#                              ppm_threshold=1.5, 
 #                              target_length=65536, n_iter=2,
-#                              target_peaks=[178, 176, 171, 160, 124],
-#                              metabolite_names=["hydrate", "kl-form", "ketoleucine", "bicarbonate", "CO2"],
+#                              target_peaks=[178, 176.5, 171, 160, 124],
+#                              metabolite_names=["hydrate", "leucine", "ketoleucine", "bicarbonate", "CO2"],
 #                              tolerance=1,
 #                              output_csv=output_csv,
 #                              time_interval=3.5)
@@ -865,10 +897,10 @@ if __name__ == '__main__':
 # Process four folders and plot results in a single window.
 # The processed data for each folder can be saved as individual PDFs.
 
-# folder_numbers = [10, 30, 60, 90]  # example folder numbers chosen by the user
-# # base_path = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-02-06\250206-131739 7degCarbon-Cells (KIC_SLIC_002)"  # adjust base path as needed
-# base_path=r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-03-12\250312-121333 7degCarbon-Cells (Pyr_KIC_CoPol_Cells_001)"
-# output_dir = r"D:\WSU\2025-03 Co-polarization Cell paper\Data Analysis\Plotted Data\Run 1 Plots"       # directory where individual PDFs will be saved
+# folder_numbers = [10, 15, 30, 90]  # example folder numbers chosen by the user
+# base_path = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-06-10\250610-165343 7degCarbon-Cells (PYR70_4)"  # adjust base path as needed
+# # base_path=r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-03-12\250312-121333 7degCarbon-Cells (Pyr_KIC_CoPol_Cells_001)"
+# output_dir = r"D:\[temp] WSU\2025-02 Pyruvate Cell Paper\Data Analysis\Run4plots"       # directory where individual PDFs will be saved
 
 # # Set uniform axis limits; for instance, for FFT plots:
 # x_axis_limits = (220, 0)  # chemical shift ppm (note: in FFT plots, x-axis is often inverted)
@@ -876,5 +908,10 @@ if __name__ == '__main__':
 
 # process_four_folders_plots(folder_numbers, base_path, mode="fft", save_plots=True, output_pdf_dir=output_dir,
 #                            xlim=x_axis_limits, ylim=y_axis_limits, plot_noisy_fft=False,
-#                            L=4000, T2_apod=1.5, phase_corr_angle=10, initial_k=8,
-#                            allowed_ppms=[178, 171, 170, 160, 124], ppm_threshold=1, target_length=65536, n_iter=2)
+#                            L=4000, T2_apod=1.5, phase_corr_angle=0, initial_k=12,
+#                            allowed_ppms=[178, 176.9, 170, 160, 124], ppm_threshold=1, target_length=65536, n_iter=2)
+
+# # process_four_folders_plots(folder_numbers, base_path, mode="fft", save_plots=True, output_pdf_dir=output_dir,
+# #                            xlim=x_axis_limits, ylim=y_axis_limits, plot_noisy_fft=False,
+# #                            L=4000, T2_apod=1.5, phase_corr_angle=10, initial_k=8,
+# #                            allowed_ppms=[178, 171, 170, 160, 124], ppm_threshold=1, target_length=65536, n_iter=2)
