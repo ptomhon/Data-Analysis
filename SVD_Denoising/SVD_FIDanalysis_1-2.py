@@ -174,7 +174,7 @@ def check_fft_validity(fid_segment, dt, T2_apod, phase_corr_angle, allowed_ppms,
     ppm_axis = -((freqs_plot - (2500 - 639.08016399999997)) / 15.507665)
     
     # Condition 1: Check for negative peaks.
-    if np.min(fft_plot_real) < -8:
+    if np.min(fft_plot_real) < -30:
         print("Quality check failed: Negative peaks detected (min value = {:.4f}).".format(np.min(fft_plot_real)))
         return False
     
@@ -278,6 +278,66 @@ def plot_denoised_results(time, noisy_signal, denoised_signal, mode="fid"):
         plt.show()
     else:
         raise ValueError("mode must be either 'fid' or 'fft'")
+
+
+# ====================================================
+#  --- Helper function to match target peaks ---
+# ====================================================
+def match_targets_to_peaks(
+    peak_data, target_peaks, tolerance=1.0, prefer="height",
+    unique=True, alpha=0.25
+):
+    """
+    Hybrid matcher (distance-aware):
+      • Build candidates within ±tolerance of each target.
+      • Score = (metric / max_metric_in_window) - alpha * (dist / tolerance)
+      • Highest score wins (tie-break by larger metric).
+      • If unique=True, each detected peak can be used only once.
+    """
+    if prefer not in ("height", "integral"):
+        raise ValueError("prefer must be 'height' or 'integral'")
+    metric_key = "height" if prefer == "height" else "integral"
+
+    available = set(range(len(peak_data)))
+    target_heights, target_integrals = [], []
+
+    for tp in target_peaks:
+        # collect candidates inside tolerance
+        cands = []
+        for i, pk in enumerate(peak_data):
+            if unique and i not in available:
+                continue
+            dppm = abs(pk["position_converted"] - tp)
+            if dppm <= tolerance:
+                cands.append((i, pk, dppm))
+
+        # no in-window candidate → zero
+        if not cands:
+            target_heights.append(0.0)
+            target_integrals.append(0.0)
+            continue
+
+        # normalize metric within this target's window
+        mmax = max(pk[metric_key] for _, pk, _ in cands) or 1.0
+
+        # distance-aware score
+        best = None
+        best_tuple = None  # (score, metric, -dist)
+        for i, pk, dppm in cands:
+            metric = pk[metric_key]
+            score = (metric / mmax) - alpha * (dppm / tolerance)
+            t = (score, metric, -dppm)  # prefer higher score, then higher metric, then closer
+            if (best is None) or (t > best_tuple):
+                best, best_tuple = (i, pk), t
+
+        best_i, best_pk = best
+        target_heights.append(best_pk["height"])
+        target_integrals.append(best_pk["integral"])
+        if unique:
+            available.remove(best_i)
+
+    return target_heights, target_integrals
+
 
 # ====================================================
 #  --- Helper function to plot on a given axis ---
@@ -456,7 +516,7 @@ def process_single_folder(
     signal_real = fft_data_plot.real
 
     # Low-ish threshold + prominence, matching multi-folder defaults
-    peak_threshold = 3
+    peak_threshold = 2
     peak_prominence = 5
     peaks, _ = find_peaks(signal_real, height=peak_threshold, prominence=peak_prominence, distance=20)
     print(f"Folder {folder}: Detected {len(peaks)} peaks via find_peaks.")
@@ -498,21 +558,21 @@ def process_single_folder(
     else:
         print(f"Folder {folder}: No peaks detected. Skipping integration.")
 
-    # ---- 5) Match to targets (same as multi-folder) ----
-    target_heights, target_integrals = [], []
-    for target in target_peaks:
-        match_found = False
-        for pk in peak_data:
-            if abs(pk["position_converted"] - target) <= tolerance:
-                target_heights.append(pk["height"])
-                target_integrals.append(pk["integral"])
-                match_found = True
-                break
-        if not match_found:
-            target_heights.append(0.0)
-            target_integrals.append(0.0)
-
+    # ---- 5) Match to targets (prevent duplicate assignments) ----
+    # print(f"Target list: {target_peaks} | tolerance={tolerance}")
+    target_heights, target_integrals = match_targets_to_peaks(
+        peak_data,
+        target_peaks=target_peaks,
+        tolerance=tolerance if 'tolerance' in locals() else 1.0,
+        prefer="height",   # choose strongest candidate in the window
+        unique=True,        # ensure one detected peak can't serve two targets
+        alpha=0.25
+    )
     print(f"Folder {folder}: Matched data - Heights {target_heights}, Integrals {target_integrals}")
+
+    end_time = time.time()
+    print(f"Single folder processing complete in {end_time - start_time:.2f} s.")
+
 
     # ---- 6) Optional plotting (consistent visuals) ----
     if plot_time_domain:
@@ -529,9 +589,6 @@ def process_single_folder(
                             plot_noisy_fft=plot_noisy_fft)
         fig_fft.tight_layout()
         plt.show()
-
-    end_time = time.time()
-    print(f"Single folder processing complete in {end_time - start_time:.2f} s.")
 
     # Optional time point for alignment with multi-folder exports
     time_point = None
@@ -731,20 +788,14 @@ def process_multiple_folders(start_folder, end_folder, base_path,
             print(f"  Integral = {integral:.4f}")
             print(f"  Integration range (ppm): [{ppm_axis[left_edge]:.2f}, {ppm_axis[right_edge]:.2f}]")
 
-        # Match each target peak (metabolite) with the detected peaks.
-        target_heights = []
-        target_integrals = []
-        for target in target_peaks:
-            match_found = False
-            for peak in peak_data:
-                if abs(peak["position_converted"] - target) <= tolerance:
-                    target_heights.append(peak["height"])
-                    target_integrals.append(peak["integral"])
-                    match_found = True
-                    break
-            if not match_found:
-                target_heights.append(0)
-                target_integrals.append(0)
+        # Match each target to the strongest detected peak within tolerance (no duplicates across targets)
+        target_heights, target_integrals = match_targets_to_peaks(
+            peak_data,
+            target_peaks=target_peaks,
+            tolerance=tolerance,
+            prefer="height",   # or "integral" if you prefer area dominance
+            unique=True        # typically safer to avoid double-assignments
+        )
 
         time_point = (folder - 1) * time_interval
         results.append([time_point] + target_heights + target_integrals)
@@ -806,22 +857,22 @@ def process_multiple_folders(start_folder, end_folder, base_path,
 #                       allowed_ppms=[178, 176, 171, 170, 160, 124], n_iter=2, L=4000, initial_k=8, T2_apod=1, phase_corr_angle=10)
 
 # Cancer cell data processing
-# data_a = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-# data_b = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-# data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+data_a = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
+data_b = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
+data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
 
-data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+# data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
+# data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
+# data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
 
-process_single_folder(folder=60, base_path=data_c,
-                      initial_k=4, L=4000, T2_apod=1.5, phase_corr_angle=10,
+process_single_folder(folder=10, base_path=data_c,
+                      initial_k=8, L=4000, T2_apod=1.5, phase_corr_angle=10,
                       allowed_ppms=[182.5, 178, 170, 160, 124], 
                       ppm_threshold=20,
                       target_length=65536, n_iter=2,
                       target_peaks=[182.5, 178, 170, 160, 124],
                       metabolite_names=["lactate", "hydrate", "pyruvate", "bicarbonate", "CO2"],
-                      tolerance=5, time_interval=3.5,
+                      tolerance=1, time_interval=3.5,
                       plot_time_domain=True, plot_fft=True, plot_noisy_fft=True) 
 
 
