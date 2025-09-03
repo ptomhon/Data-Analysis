@@ -712,9 +712,9 @@ def process_multiple_folders(start_folder, end_folder, base_path,
 
 
 # Cancer cell data processing
-data_a = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-data_b = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+# data_a = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
+# data_b = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
+# data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
 
 # data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
 # data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
@@ -724,12 +724,12 @@ data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon
 # data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
 # data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
 
-# data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-112726 7degCarbon-Cells (PYR70_1)"
-# data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-122114 7degCarbon-Cells (PYR70_2)"
-# data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-130032 7degCarbon-Cells (PYR70_3)"
-# data_d = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-151918 7degCarbon-Cells (PYR70_5)"
-# data_e = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-160303 7degCarbon-Cells (PYR70_6)"
-# data_f = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-164823 7degCarbon-Cells (PYR70_7)"
+data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-112726 7degCarbon-Cells (PYR70_1)"
+data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-122114 7degCarbon-Cells (PYR70_2)"
+data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-130032 7degCarbon-Cells (PYR70_3)"
+data_d = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-151918 7degCarbon-Cells (PYR70_5)"
+data_e = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-160303 7degCarbon-Cells (PYR70_6)"
+data_f = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-164823 7degCarbon-Cells (PYR70_7)"
 
 # process_single_folder(folder=10, base_path=data_c,
 #                       initial_k=8, L=4000, T2_apod=1.5, phase_corr_angle=10,
@@ -749,15 +749,15 @@ data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon
 # Pyruvate data processing
 if __name__ == '__main__':
     # Base path where folder subdirectories (each containing fid.csv) reside.
-    base_path = data_c
+    base_path = data_a
     # Full path (including CSV filename) where the integrated results should be saved.
-    output_dir = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis"
-    output_name="integrated_data_250819-134130 (PYR07_3)"
+    output_dir = r"D:\[temp] WSU\2025-08 Leukemia Cancer Cells\Data Analysis"
+    output_name="integrated_data_250826-112726 (PYR07_1)"
 
     process_multiple_folders(
-        start_folder=5, end_folder=6, 
+        start_folder=4, end_folder=200, 
         base_path=base_path,
-        n_threshold=2, initial_k=2, L=4000, T2_apod=1.5, phase_corr_angle=10,
+        n_threshold=3, initial_k=10, L=4000, T2_apod=1.5, phase_corr_angle=10,
         allowed_ppms=[182.5, 178, 170, 160, 124], 
         ppm_threshold=20, target_length=65536, n_iter=2,
         target_peaks=[182.5, 178, 170, 160, 124],
@@ -766,5 +766,5 @@ if __name__ == '__main__':
         output_dir=output_dir,
         output_name=output_name,
         save_per_folder=True,
-        time_interval=3.5
+        time_interval=3.0983
     )
