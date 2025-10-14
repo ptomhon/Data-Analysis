@@ -68,6 +68,9 @@ PRESETS = {
         "n_threshold": 3,  # used only if your in-file learning logic refers to it
         # GUI default time_interval (per folder override-able):
         "default_time_interval": 2.5,
+        "k_learning_skip": 3,
+        "k_learning_window": 9,
+        "k_learning_trim": 5,
     },
     "KL_RUN": {
         # Start with PYR defaults; user can edit
@@ -85,6 +88,9 @@ PRESETS = {
         "save_per_folder": True,
         "n_threshold": 2,
         "default_time_interval": 2.5,
+        "k_learning_skip": 3,
+        "k_learning_window": 9,
+        "k_learning_trim": 5,
     },
     "COPOL_RUN": {
         # Start with PYR defaults; user can edit
@@ -102,6 +108,9 @@ PRESETS = {
         "save_per_folder": True,
         "n_threshold": 2,
         "default_time_interval": 2.5,
+        "k_learning_skip": 3,
+        "k_learning_window": 9,
+        "k_learning_trim": 5,
     },
 }
 
@@ -212,6 +221,9 @@ class ParametersDialog(QDialog):
         form.addRow("save_per_folder", cb)
         form.addRow("n_threshold", spin_i("n_threshold", (1, 64)))
         form.addRow("default_time_interval", spin_f("default_time_interval", (0.0, 1e6), step=0.1, decimals=3))
+        form.addRow("k_learning_skip (omit first n folders)", spin_i("k_learning_skip", (0, 1000)))
+        form.addRow("k_learning_window (rolling W)", spin_i("k_learning_window", (1, 1000)))
+        form.addRow("k_learning_trim (middle M of W)", spin_i("k_learning_trim", (1, 1000)))
 
         layout.addLayout(form)
 
@@ -293,6 +305,9 @@ class ParametersDialog(QDialog):
         out["ppm_threshold"] = float(out.get("ppm_threshold", 1))
         out["tolerance"] = float(out.get("tolerance", 1.0))
         out["save_per_folder"] = bool(out.get("save_per_folder", True))
+        out["k_learning_skip"] = int(out.get("k_learning_skip", 3))
+        out["k_learning_window"] = int(out.get("k_learning_window", 9))
+        out["k_learning_trim"] = int(out.get("k_learning_trim", 5))
 
         self.params.update(out)
         self.accept()

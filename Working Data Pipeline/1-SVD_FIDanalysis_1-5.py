@@ -606,7 +606,9 @@ def process_multiple_folders(base_path, start_folder=1, end_folder=200,
                              output_name=None,       # e.g., "integrated_data_250610-Run5"
                              save_per_folder=True,
                              time_interval=3.5,
-                             k_learning_skip=3,  # skip first N folders for learning
+                             k_learning_skip=5,  # skip first N folders for learning
+                             k_learning_window=9,
+                             k_learning_trim=5,
                              per_inner_folder_cb=None,   # callable(done_count:int, total_count:int, folder_num:int)
                              should_stop_cb=None         # callable() -> bool, if True: stop after current inner folder
                             ):
@@ -639,7 +641,7 @@ def process_multiple_folders(base_path, start_folder=1, end_folder=200,
 
     current_initial_k = initial_k
     # Rolling window of the last up to 5 finishing k’s
-    recent_finishing_k = deque(maxlen=5)
+    recent_finishing_k = deque(maxlen=int(k_learning_window))
 
     # BEFORE the loop over numbered folders:
     # set up counters, etc.
@@ -789,7 +791,7 @@ def process_multiple_folders(base_path, start_folder=1, end_folder=200,
         if summary_csv_path:
             append_summary_row(summary_csv_path, row)
 
-        # --- Dynamic k adaptation: skip first k_learning_skip folders; then require 5 samples ---
+        # --- Dynamic k adaptation: skip first k_learning_skip folders; then robust middle-M of last W ---
         if done_count < int(k_learning_skip):
             # still skipping; don't include this folder's k in the average
             to_go = int(k_learning_skip) - done_count
@@ -801,22 +803,42 @@ def process_multiple_folders(base_path, start_folder=1, end_folder=200,
         else:
             # start collecting after the skip window
             recent_finishing_k.append(optimal_k)
-            if len(recent_finishing_k) >= 5:
-                avg_k = float(np.mean(recent_finishing_k))
+            vals = list(recent_finishing_k)
+            W = len(vals)
+            M = int(k_learning_trim)
+
+            if W >= M and M > 0:
+                s = sorted(vals)
+                # take the middle M values (trim equally from both ends if possible)
+                start = (W - M) // 2
+                mid = s[start:start + M]
+                avg_k = float(sum(mid) / len(mid))
                 next_k = int(math.ceil(avg_k))
                 next_k = max(1, min(L, next_k))  # clamp to [1, L]
                 print(
-                    "Learning update:"
-                    f" finishing_k={list(recent_finishing_k)} | avg={avg_k:.3f}"
+                    "Learning update (trimmed):"
+                    f" window={W}, trim_size={M}, middle={mid}, avg={avg_k:.3f}"
                     f" -> next starting k = {next_k} (was {current_initial_k})"
                 )
                 current_initial_k = next_k
             else:
+                # Not enough samples for trimmed mean yet: use median as a robust fallback
+                s = sorted(vals)
+                mid_idx = len(s) // 2
+                if len(s) % 2 == 1:
+                    median = float(s[mid_idx])
+                else:
+                    median = 0.5 * (s[mid_idx - 1] + s[mid_idx])
+                next_k = int(math.ceil(median))
+                next_k = max(1, min(L, next_k))
                 print(
                     "Learning warm-up:"
-                    f" collected finishing_k={list(recent_finishing_k)}"
-                    f" | need {5 - len(recent_finishing_k)} more before adapting k"
+                    f" collected finishing_k={vals} (W={W})"
+                    f" < trim_size={M}; using median={median:.3f}"
+                    f" -> next starting k = {next_k} (was {current_initial_k})"
                 )
+                current_initial_k = next_k
+
 
         done_count += 1
         if callable(per_inner_folder_cb):
