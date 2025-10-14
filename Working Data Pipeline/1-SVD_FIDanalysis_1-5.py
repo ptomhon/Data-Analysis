@@ -791,50 +791,42 @@ def process_multiple_folders(base_path, start_folder=1, end_folder=200,
         if summary_csv_path:
             append_summary_row(summary_csv_path, row)
 
-        # --- Dynamic k adaptation: skip first k_learning_skip folders; then robust middle-M of last W ---
+        # --- Dynamic k adaptation: skip first k_learning_skip; then wait until window is FULL before adapting ---
         if done_count < int(k_learning_skip):
             # still skipping; don't include this folder's k in the average
             to_go = int(k_learning_skip) - done_count
             print(
                 "Learning warm-up (skip):"
                 f" processed={done_count}, skipping this folder’s finishing_k={optimal_k};"
-                f" {to_go} more to skip before averaging starts"
+                f" {to_go} more to skip before collecting"
             )
         else:
             # start collecting after the skip window
             recent_finishing_k.append(optimal_k)
-            vals = list(recent_finishing_k)
-            W = len(vals)
-            M = int(k_learning_trim)
+            W_current = len(recent_finishing_k)
+            W_target  = int(k_learning_window)
+            M         = int(k_learning_trim)
 
-            if W >= M and M > 0:
-                s = sorted(vals)
-                # take the middle M values (trim equally from both ends if possible)
-                start = (W - M) // 2
+            # Do NOT adapt until window is FULL
+            if W_current < W_target:
+                print(
+                    "Learning warm-up (collecting):"
+                    f" collected={W_current}/{W_target} finishing_k after skip;"
+                    " not adapting yet"
+                )
+            else:
+                # Window is full: compute trimmed-mean of middle M over the last W_target values
+                s = sorted(recent_finishing_k)
+                if M > W_target:
+                    M = W_target
+                start = (W_target - M) // 2
                 mid = s[start:start + M]
                 avg_k = float(sum(mid) / len(mid))
                 next_k = int(math.ceil(avg_k))
                 next_k = max(1, min(L, next_k))  # clamp to [1, L]
                 print(
-                    "Learning update (trimmed):"
-                    f" window={W}, trim_size={M}, middle={mid}, avg={avg_k:.3f}"
-                    f" -> next starting k = {next_k} (was {current_initial_k})"
-                )
-                current_initial_k = next_k
-            else:
-                # Not enough samples for trimmed mean yet: use median as a robust fallback
-                s = sorted(vals)
-                mid_idx = len(s) // 2
-                if len(s) % 2 == 1:
-                    median = float(s[mid_idx])
-                else:
-                    median = 0.5 * (s[mid_idx - 1] + s[mid_idx])
-                next_k = int(math.ceil(median))
-                next_k = max(1, min(L, next_k))
-                print(
-                    "Learning warm-up:"
-                    f" collected finishing_k={vals} (W={W})"
-                    f" < trim_size={M}; using median={median:.3f}"
+                    "Learning update (trimmed, full window):"
+                    f" window={W_target}, trim_size={M}, middle={mid}, avg={avg_k:.3f}"
                     f" -> next starting k = {next_k} (was {current_initial_k})"
                 )
                 current_initial_k = next_k
