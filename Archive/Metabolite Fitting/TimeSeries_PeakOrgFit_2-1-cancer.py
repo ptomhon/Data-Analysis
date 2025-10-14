@@ -7,8 +7,12 @@ from scipy.integrate import solve_ivp
 from scipy.signal import savgol_filter
 
 # === SETTINGS ===
-file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250819-125332-Pyr70_2.csv"
-save_folder = '125332_plot_integrals'  # Folder to save plots
+# file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250826-112726 (PYR07_1).csv"
+# file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250826-122114 (PYR07_2).csv"
+# file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250826-130032 (PYR07_3).csv"
+# file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250826-151918 (PYR07_5).csv"
+file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\integrated_data_250826-160303 (PYR70_6)-EARLY.csv"
+# file_path = r"D:\WSU\Projects\2025-08 Leukemia Cell Experiments\Data Analysis\.csv"save_folder = '125332_plot_integrals'  # Folder to save plots
 
 target_peaks = [182.5, 178, 170, 160, 124]
 target_peaks_labels = [f'P{peak}' for peak in target_peaks]
@@ -16,27 +20,19 @@ method = 'integrals'
 
 # Define peak indices for substrate and products
 substratepeak = 2
-product1peak = 4  # CO2
-product2peak = 3  # HCO3
 product3peak = 1  # PYH
 product4peak = 0  # LAC
 smoothing = False
-startPoint = 5
+startPoint = 1
 
 startTimep3 = -2.0  # Start time for product 3
-startTimep4 = 0.0  # Start time for product 4
+startTimep4 = -2.0  # Start time for product 4
 
 ##Substrate settings
 #Substrate corresponding to column 1 of .csv file
 substrate = '1-13C-Pyruvate'      #Name of substrate
 
 ##Product settings
-#product_1 corresponding to column 2 of .csv file
-product_1 = 'CO2'       #Name of product_1
-
-#product_2 corresponding to column 3 of .csv file
-product_2 = 'HC03'       #Name of product_2
-
 #product_3 corresponding to column 4 of .csv file
 use_3 = 1       #0 if there is no metabolism and 1 if there is
 product_3 = 'PYH'           #Name of product_3
@@ -188,51 +184,13 @@ print(processed_data_array.shape)
 
 # Extract signals
 tsub, sub = extract_filtered_data(filtered_arrays, target_peaks_labels[substratepeak], start_index=startPoint)
-# t1, p1 = extract_filtered_data(filtered_arrays, target_peaks_labels[product1peak], start_index=startPoint)
-# t2, p2 = extract_filtered_data(filtered_arrays, target_peaks_labels[product2peak], start_index=startPoint)
 t3, p3 = extract_filtered_data(filtered_arrays, target_peaks_labels[product3peak], start_index=startPoint) if use_3 else (np.array([]), np.array([]))
 t4, p4 = extract_filtered_data(filtered_arrays, target_peaks_labels[product4peak], start_index=startPoint) if use_4 else (np.array([]), np.array([]))
 
 tsub_max = tsub[-1]
-print(sub[1:10])
+# print(sub[1:10])
 
-# # === SETUP MODELS FOR PRODUCT FIT ===
-# # --- Define the two-compartment ODE system for CO₂ and bicarbonate ---
-# def ode_system(t, y, params, sub_interp):
-#     CO2, BIC = y
-#     ksubCO, kBCCO, kCOBC, gam1, gam2 = params
-#     sub_val = sub_interp(t)
-#     dCO2 = ksubCO * sub_val - kBCCO * CO2 + kCOBC * BIC - gam1 * CO2
-#     dBIC = kBCCO * CO2 - kCOBC * BIC - gam2 * BIC
-#     return [dCO2, dBIC]
-
-# def integrate_model(params, t_measured, sub_interp):
-#     t_start = 0
-#     t_end = t_measured[-1]
-#     t_dense = np.linspace(t_start, t_end, 300)
-#     sol = solve_ivp(lambda t, y: ode_system(t, y, params, sub_interp),
-#                     t_span=(t_start, t_end),
-#                     y0=[0, 0],
-#                     t_eval=t_dense,
-#                     method='RK45')
-#     CO2_interp = interp1d(t_dense, sol.y[0], kind='linear', bounds_error=False, fill_value="extrapolate")
-#     BIC_interp = interp1d(t_dense, sol.y[1], kind='linear', bounds_error=False, fill_value="extrapolate")
-
-#     return CO2_interp(t_measured), BIC_interp(t_measured)
-
-# # --- Define the residuals function for least squares fitting ---
-# def residuals(params, t_CO, data_CO, t_BC, data_BC, sub_interp):
-    
-#     constrained_params = np.array([params[0], params[1], params[2], params[3], params[3]]) # Enforce gamBC == gamCO
-    
-#     model_CO2, _ = integrate_model(constrained_params, t_CO, sub_interp)
-#     _, model_BIC = integrate_model(constrained_params, t_BC, sub_interp)
-    
-#     resid_CO = model_CO2 - data_CO
-#     resid_BIC = model_BIC - data_BC
-    
-#     return np.concatenate([resid_CO, resid_BIC])
-
+# === MODEL FITTING ===
 # --- Define one-compartment ODE system for additional products ---
 def ode_single(t, y, k, gam):
     return k * sub_interp(t) - gam * y
@@ -251,37 +209,26 @@ def exp_decay(t, A, tau, C):
 
 # === FIT SUBSTRATE AND PRODUCTS ===
 # Fit the substrate decay using an exponential decay model
-init_guess_KL = [max(sub), 100, min(sub)]  # Initial guess for A, tau, C
+init_guess_KL = [max(sub), 70, min(sub)]  # Initial guess for A, tau, C
 popt, _ = curve_fit(exp_decay, tsub, sub, p0=init_guess_KL)
 y_fit = exp_decay(tsub, *popt)
 sub_interp = interp1d(tsub, y_fit, kind='linear', bounds_error=False, fill_value="extrapolate") # Create an interpolation function for substrate flux
 
-# --- Fit CO₂ and HCO₃⁻ ---
-# # init_guess = [ksubCO, kBCCO, kCOBC, gam]
-# init_guess = [0.0005, 0.001, 0.001, 0.001]
-# bounds_lower = [0.00001, 0.001, 0.001, 0.001]
-# bounds_upper = [0.1, 0.1, 0.1, 0.1]
-
-# result = least_squares(lambda p: residuals(p, t1, p1, t2, p2, sub_interp),
-#                        x0=init_guess, bounds=(bounds_lower, bounds_upper))
-# # best_params = result.x
-# best_params = np.array([result.x[0], result.x[1], result.x[2], result.x[3], result.x[3]])  # gamBC = gamCO
-
-# --- Fit additional products if they are used ---
+# --- Fit products ---
 if use_3:
     fixed_t3 = np.concatenate((np.array([startTimep3]), t3))
     fixed_p3 = np.concatenate((np.array([0.0]), p3))
-    initial_guess_p3 = [0.001, 0.01]
+    initial_guess_p3 = [0.001, 0.03]
     popt_p3, _ = curve_fit(integrate_single, fixed_t3, fixed_p3, p0=initial_guess_p3,
-                       bounds=([0, 0], [np.inf, 0.2]))
+                       bounds=([0, 0], [0.2, 0.2]))
     p3_fit, p3_gam = popt_p3
 
 if use_4:
     fixed_t4 = np.concatenate((np.array([startTimep4]), t4))
     fixed_p4 = np.concatenate((np.array([0.0]), p4))
-    initial_guess_p4 = [0.00001, 0.01]
+    initial_guess_p4 = [0.001, 0.03]
     popt_p4, _ = curve_fit(integrate_single, fixed_t4, fixed_p4, p0=initial_guess_p4,
-                       bounds=([0, 0], [np.inf, 0.2]))
+                       bounds=([0.0005, 0], [0.2, 0.2]))
     p4_fit, p4_gam = popt_p4
 
 
@@ -358,8 +305,8 @@ xmin = -5
 ymax= 50
 ymin = -5
 
-ymax2 = 33
-ymin2 = ymax2 / 50
+ymax2 = 25
+ymin2 = -ymax2 / 50
 
 fitcolor = 'darkgrey'
 
@@ -411,8 +358,8 @@ if use_4:
     axs[2].set_xlabel("Time")
     axs[2].set_ylabel("Product 4 Signal")
     axs[2].set_title("Product 4 Accumulation")
-    axs[2].set_ylim(-0.2, 10)
     axs[2].set_xlim(xmin, xmax)
+    axs[2].set_ylim(ymin, ymax*3)
     axs[2].legend()
 
 # # Plot 6: Adjusted ratio (HCO₃⁻/CO₂)

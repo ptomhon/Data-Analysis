@@ -712,26 +712,28 @@ def process_multiple_folders(start_folder, end_folder, base_path,
 
 
 # Cancer cell data processing
-# data_a = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-# data_b = r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-# data_c =r"D:\WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
 
-# data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-# data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-# data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+data_a = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-095127 7degCarbon-Cells (PYR70_1)"
+# data_b = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-103408 7degCarbon-Cells (PYR70_2)"
+# data_c = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-111237 7degCarbon-Cells (PYR70_3)"
+# data_d = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-114635 7degCarbon-Cells (PYR70_4)"
+# data_e = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-121617 7degCarbon-Cells (PYR70_5)"
+# data_f = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-124410 7degCarbon-Cells (PYR70_6)"
+# data_g = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-132819 7degCarbon-Cells (PYR70_7)"
+# data_h = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-141545 7degCarbon-Cells (PYR70_8)"
+# data_i = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-150424 7degCarbon-Cells (PYR70_9)"
+# data_j = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-154101 7degCarbon-Cells (PYR70_10)"
+# data_k = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-162418 7degCarbon-Cells (PYR70_11)"
+# data_m = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-08\251008-170058 7degCarbon-Cells (PYR70_12)"
 
-# data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-120551 7degCarbon-Cells (PYR70_1)"
-# data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-125332 7degCarbon-Cells (PYR07_2)"
-# data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-19\250819-134130 7degCarbon-Cells (PYR07_3)"
+# data_a = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-104503 7degCarbon-Cells (PYR70_1)"
+# data_b = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-113315 7degCarbon-Cells (PYR70_2)"
+# data_c = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-121921 7degCarbon-Cells (PYR70_3)"
+# data_d = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-141120 7degCarbon-Cells (PYR70_4)"
+data_e = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-150009 7degCarbon-Cells (PYR70_5)"
+data_f = r"C:\Data\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-10-10\251010-154517 7degCarbon-Cells (PYR70_6)"
 
-data_a = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-112726 7degCarbon-Cells (PYR70_1)"
-data_b = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-122114 7degCarbon-Cells (PYR70_2)"
-data_c = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-130032 7degCarbon-Cells (PYR70_3)"
-data_d = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-151918 7degCarbon-Cells (PYR70_5)"
-data_e = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-160303 7degCarbon-Cells (PYR70_6)"
-data_f = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-164823 7degCarbon-Cells (PYR70_7)"
-
-# process_single_folder(folder=10, base_path=data_c,
+# process_single_folder(folder=10, base_path=data_d,
 #                       initial_k=8, L=4000, T2_apod=1.5, phase_corr_angle=10,
 #                       allowed_ppms=[182.5, 178, 170, 160, 124], 
 #                       ppm_threshold=20,
@@ -739,7 +741,7 @@ data_f = r"D:\[temp] WSU\Raw Data\Spinsolve-1.4T_13C\2025-08-26\250826-164823 7d
 #                       target_peaks=[182.5, 178, 170, 160, 124],
 #                       metabolite_names=["lactate", "hydrate", "pyruvate", "bicarbonate", "CO2"],
 #                       tolerance=1, time_interval=3.5,
-#                       plot_time_domain=True, plot_fft=True, plot_noisy_fft=True) 
+#                       plot_time_domain=True, plot_fft=True, plot_noisy_fft=True)
 
 # =============================================================================
 # Example usage: Multiple folder processing
@@ -751,11 +753,13 @@ if __name__ == '__main__':
     # Base path where folder subdirectories (each containing fid.csv) reside.
     base_path = data_a
     # Full path (including CSV filename) where the integrated results should be saved.
-    output_dir = r"D:\[temp] WSU\2025-08 Leukemia Cancer Cells\Data Analysis"
-    output_name="integrated_data_250826-112726 (PYR07_1)"
+    # output_dir = r"C:\Data\[temp] WSU\2025-08 Leukemia Cancer Cells\Data Analysis\2025-10-10 SVD Proc-Int"
+    output_dir = r"D:\WSU\Projects\Eukaryote Experiments\2025-10 Pilot Breast Cancer Cell Experiments\Data Analysis\2025-10-08 SVD Proc-Int"
+    output_name="integrated_data_251008-095127 (PYR70_1)"
 
+    # PYR RUN
     process_multiple_folders(
-        start_folder=4, end_folder=200, 
+        start_folder=1, end_folder=200, 
         base_path=base_path,
         n_threshold=3, initial_k=10, L=4000, T2_apod=1.5, phase_corr_angle=10,
         allowed_ppms=[182.5, 178, 170, 160, 124], 
@@ -766,5 +770,37 @@ if __name__ == '__main__':
         output_dir=output_dir,
         output_name=output_name,
         save_per_folder=True,
-        time_interval=3.0983
+        time_interval=2.6391
     )
+
+    # # KL RUN
+    # process_multiple_folders(
+    #     start_folder=4, end_folder=200, 
+    #     base_path=base_path,
+    #     n_threshold=3, initial_k=10, L=4000, T2_apod=1.5, phase_corr_angle=10,
+    #     allowed_ppms=[182.5, 178.3, 173.2, 171.3, 170.2, 160, 124], 
+    #     ppm_threshold=20, target_length=65536, n_iter=2,
+    #     target_peaks=[182.5, 178.3, 173.2, 171.3, 170.2, 160, 124],
+    #     metabolite_names=["lactate","hydrate","unk1", "ketoleucine", "unk2", "bicarbonate","CO2"],
+    #     tolerance=1.0,
+    #     output_dir=output_dir,
+    #     output_name=output_name,
+    #     save_per_folder=True,
+    #     time_interval=2.4710
+    # )
+
+    # # COPOL RUN
+    # process_multiple_folders(
+    #     start_folder=4, end_folder=200, 
+    #     base_path=base_path,
+    #     n_threshold=3, initial_k=12, L=4000, T2_apod=1.5, phase_corr_angle=10,
+    #     allowed_ppms=[182.5, 178.6, 178.3, 173, 171, 170], 
+    #     ppm_threshold=20, target_length=65536, n_iter=2,
+    #     target_peaks=[182.5, 178.6, 178.3, 173, 171.4, 170.3],
+    #     metabolite_names=["lactate", "pyrhydrate", "klhydrate", "unk1", "ketoleucine", "pyruvate"],
+    #     tolerance=1.0,
+    #     output_dir=output_dir,
+    #     output_name=output_name,
+    #     save_per_folder=True,
+    #     time_interval=2.3854
+    # )

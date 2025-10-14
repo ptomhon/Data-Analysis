@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         self.date_edit = QLineEdit("2025-06-11")
         self.name_edit = QLineEdit("7degCarbon-Cells (PYR70_1)")
         self.lb_spin = QDoubleSpinBox()
-        self.lb_spin.setRange(0.0, 2.0)
+        self.lb_spin.setRange(0.0, 10.0)
         self.lb_spin.setSingleStep(0.1)
         self.lb_spin.setValue(1.0)
         self.ppm_start = QDoubleSpinBox()
