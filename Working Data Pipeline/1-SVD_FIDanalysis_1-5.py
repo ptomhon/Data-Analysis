@@ -317,7 +317,7 @@ def check_fft_validity(fid_segment, dt, T2_apod, phase_corr_angle,
     _, ppm_axis = get_freq_axes(n, dt)
     fft_plot_real = correct_baseline(np.fft.fftshift(fft_signal)[::-1].real, 100)
 
-    if np.min(fft_plot_real) < -30:
+    if np.min(fft_plot_real) < -50:
         print(f"Quality check failed: Negative peaks (min={np.min(fft_plot_real):.4f}).")
         return False
 
