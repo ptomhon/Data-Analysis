@@ -31,8 +31,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.colors as mcolors
 
-# Compatibility: numpy >= 2.0 renamed trapz → trapezoid
-_trapz = getattr(np, 'trapezoid', None) or np.trapz
+# Compatibility: numpy >= 2.0 renamed trapezoid → trapezoid
+_trapezoid = getattr(np, 'trapezoid', None) or np.trapezoid
 
 # ---------------------------
 # Processing utilities
@@ -112,7 +112,7 @@ def compute_integral(fid, time, lb, user_phase_offset, ppm_start, ppm_stop):
     ppm_vals = ppm_vals[order]
     real_vals = real_vals[order]
 
-    integral = float(_trapz(real_vals, ppm_vals)) if len(ppm_vals) > 1 else 0.0
+    integral = float(_trapezoid(real_vals, ppm_vals)) if len(ppm_vals) > 1 else 0.0
     return integral
 
 def process_and_plot(fid, time, lb, user_phase_offset, ppm_start, ppm_stop):
@@ -127,7 +127,7 @@ def process_and_plot(fid, time, lb, user_phase_offset, ppm_start, ppm_stop):
     ppm_vals = ppm_vals[order]
     real_vals = real_vals[order]
 
-    integral = float(_trapz(real_vals, ppm_vals)) if len(ppm_vals) > 1 else 0.0
+    integral = float(_trapezoid(real_vals, ppm_vals)) if len(ppm_vals) > 1 else 0.0
 
     fig = Figure(figsize=(7, 4))
     ax = fig.add_subplot(111)
@@ -324,7 +324,7 @@ def deconvolve_spectrum(ppm_vals, real_vals, n_peaks_requested, lineshape="loren
         # Scale each hybrid proportionally so sum matches actual data
         hybrid_normalized = raw_hybrids[i] * (actual_nonneg / raw_sum_safe)
 
-        integral_i = float(_trapz(hybrid_normalized, ppm_vals)) if len(ppm_vals) > 1 else 0.0
+        integral_i = float(_trapezoid(hybrid_normalized, ppm_vals)) if len(ppm_vals) > 1 else 0.0
 
         peak_results.append({
             'center_ppm': fitted_centers[i],

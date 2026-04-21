@@ -77,7 +77,7 @@ def process_and_plot(fid, time, lb, phase_offset, ppm_start, ppm_stop, dic):
     sort_idx = np.argsort(ppm_vals)
     ppm_vals = ppm_vals[sort_idx]
     real_vals = real_vals[sort_idx]
-    integral = np.trapz(real_vals, ppm_vals)
+    integral = np.trapezoid(real_vals, ppm_vals)
 
     fig = Figure(figsize=(8, 6))
     ax = fig.add_subplot(111)

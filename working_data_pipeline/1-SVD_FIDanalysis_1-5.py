@@ -347,7 +347,7 @@ def check_fft_validity(fid_segment, dt, T2_apod, phase_corr_angle,
         while ri < N and fft_plot_real[ri] > epsilon:
             ri += 1
 
-        integral = np.trapz(fft_plot_real[li:ri+1], ppm_axis[li:ri+1])
+        integral = np.trapezoid(fft_plot_real[li:ri+1], ppm_axis[li:ri+1])
         print(f"Peak at {ppm_axis[p]:.2f} ppm: height={peak_val:.4f}, integral={integral:.4f}")
         if integral < integration_threshold:
             print(f"Quality check failed: Area too low at {ppm_axis[p]:.2f} ppm ({integral:.4f} < {integration_threshold}).")
