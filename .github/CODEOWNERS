@@ -9,3 +9,4 @@
 # Locked pipeline folders — only the repo owner may approve changes
 "Working Data Pipeline/"  @ptomhon
 "Raw Data Visualization/" @ptomhon
+README.md @ptomhon
